@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overtime Record System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .buttons {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .total-box {
+            float: right;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="buttons">
+            <button onclick="addRecord()">Add Record</button>
+            <button onclick="deleteRecord()">Delete Record</button>
+            <button onclick="exportToFile()">Export to Text File</button>
+        </div>
+
+        <table id="overtimeTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Event Name</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Total OT Time (minutes)</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+
+        <div class="total-box">
+            Total Minutes: <span id="totalMinutes">0</span>
+        </div>
+    </div>
+
+    <script>
+        let records = [];
+
+        function addRecord() {
+            const date = prompt("Enter date (YYYY-MM-DD):");
+            const eventName = prompt("Enter event name:");
+            const startTime = prompt("Enter start time (HH:MM):");
+            const endTime = prompt("Enter end time (HH:MM):");
+
+            if (date && eventName && startTime && endTime) {
+                const start = new Date(`2000-01-01T${startTime}`);
+                const end = new Date(`2000-01-01T${endTime}`);
+                const minutes = Math.round((end - start) / (1000 * 60));
+
+                records.push({
+                    date,
+                    eventName,
+                    startTime,
+                    endTime,
+                    minutes
+                });
+
+                updateTable();
+                updateTotal();
+            }
+        }
+
+        function deleteRecord() {
+            const index = prompt("Enter the row number to delete (1-based):");
+            if (index && !isNaN(index)) {
+                records.splice(index - 1, 1);
+                updateTable();
+                updateTotal();
+            }
+        }
+
+        function exportToFile() {
+            let content = "Overtime Records\n\n";
+            records.forEach((record, index) => {
+                content += `Record ${index + 1}:\n`;
+                content += `Date: ${record.date}\n`;
+                content += `Event: ${record.eventName}\n`;
+                content += `Start: ${record.startTime}\n`;
+                content += `End: ${record.endTime}\n`;
+                content += `Total Minutes: ${record.minutes}\n\n`;
+            });
+            content += `Total Minutes: ${calculateTotal()}`;
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'overtime_records.txt';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            records.forEach((record, index) => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = record.date;
+                row.insertCell(1).textContent = record.eventName;
+                row.insertCell(2).textContent = record.startTime;
+                row.insertCell(3).textContent = record.endTime;
+                row.insertCell(4).textContent = record.minutes;
+            });
+        }
+
+        function calculateTotal() {
+            return records.reduce((sum, record) => sum + record.minutes, 0);
+        }
+
+        function updateTotal() {
+            document.getElementById('totalMinutes').textContent = calculateTotal();
+        }
+    </script>
+</body>
+</html>
