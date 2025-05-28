@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Overtime Record Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+        }
+        .buttons {
+            margin-top: 15px;
+        }
+        .total-box {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        .export-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 120px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Overtime Record Tracker</h1>
+    
+    <!-- Form Section -->
+    <div class="form-group">
+        <label for="date">Date:</label>
+        <input type="date" id="date" required>
+    </div>
+    <div class="form-group">
+        <label for="event">Event:</label>
+        <input type="text" id="event" required>
+    </div>
+    <div class="form-group">
+        <label for="startTime">Start Time:</label>
+        <input type="time" id="startTime" required>
+    </div>
+    <div class="form-group">
+        <label for="endTime">End Time:</label>
+        <input type="time" id="endTime" required>
+    </div>
+    <div class="buttons">
+        <button onclick="addRecord()">Add Record</button>
+        <button onclick="modifyRecord()">Modify Record</button>
+        <button onclick="deleteRecord()">Delete Record</button>
+    </div>
+
+    <!-- Records Table -->
+    <table id="recordTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Event</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Total Time (min)</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- Records will appear here -->
+        </tbody>
+    </table>
+
+    <!-- Total OT Hours Display -->
+    <div class="total-box" id="totalBox">
+        Total OT Hours: <span id="totalHours">0</span> hours
+    </div>
+
+    <!-- Export Button -->
+    <button class="export-btn" onclick="exportToTXT()">Export to OT.txt</button>
+
+    <script>
+        let records = JSON.parse(localStorage.getItem('overtimeRecords') || '[]');
+
+        function saveRecords() {
+            localStorage.setItem('overtimeRecords', JSON.stringify(records));
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            records.forEach((record, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.date}</td>
+                    <td>${record.event}</td>
+                    <td>${record.startTime}</td>
+                    <td>${record.endTime}</td>
+                    <td>${record.totalTime}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function calculateTotalHours() {
+            const totalMinutes = records.reduce((sum, record) => sum + parseInt(record.totalTime), 0);
+            const totalHours = Math.floor(totalMinutes / 60);
+            const remainingMinutes = totalMinutes % 60;
+            document.getElementById('totalHours').textContent = `${totalHours}h ${remainingMinutes}m`;
+        }
+
+        function addRecord() {
+            const date = document.getElementById('date').value;
+            const event = document.getElementById('event').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            const start = new Date(`1970-01-01T${startTime}`);
+            const end = new Date(`1970-01-01T${endTime}`);
+            const diffMinutes = Math.floor((end - start) / 60000);
+            
+            records.push({ date, event, startTime, endTime, totalTime: diffMinutes });
+            saveRecords();
+            updateTable();
+            calculateTotalHours();
+            resetForm();
+        }
+
+        function modifyRecord() {
+            const selectedRow = document.querySelector('#recordTable tr.selected');
+            if (!selectedRow) {
+                alert("Please select a record to modify");
+                return;
+            }
+
+            const index = Array.from(selectedRow.parentNode.children).indexOf(selectedRow);
+            const record = records[index];
+
+            document.getElementById('date').value = record.date;
+            document.getElementById('event').value = record.event;
+            document.getElementById('startTime').value = record.startTime;
+            document.getElementById('endTime').value = record.endTime;
+
+            // Remove selected class from all rows
+            document.querySelectorAll('#recordTable tr').forEach(row => row.classList.remove('selected'));
+            selectedRow.classList.add('selected');
+        }
+
+        function deleteRecord() {
+            const selectedRow = document.querySelector('#recordTable tr.selected');
+            if (!selectedRow) {
+                alert("Please select a record to delete");
+                return;
+            }
+
+            const index = Array.from(selectedRow.parentNode.children).indexOf(selectedRow);
+            records.splice(index, 1);
+            saveRecords();
+            updateTable();
+            calculateTotalHours();
+        }
+
+        function resetForm() {
+            document.getElementById('date').value = '';
+            document.getElementById('event').value = '';
+            document.getElementById('startTime').value = '';
+            document.getElementById('endTime').value = '';
+        }
+
+        function exportToTXT() {
+            const content = records.map(r => 
+                `${r.date},${r.event},${r.startTime},${r.endTime},${r.totalTime}`
+            ).join('\n');
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'OT.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // Initialize
+        updateTable();
+        calculateTotalHours();
+    </script>
+</body>
+</html>
